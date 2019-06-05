@@ -1,0 +1,46 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Upload
+{% endblock %}
+
+{% block main %}
+
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" id="file" class="inputfile" data-multiple-caption="{count} files selected" multiple />
+        <label id="filelabel" for="file"><span>Choose a file</span></label>
+        <br><br>
+        <input class="btn btn-primary box__button" type="submit" value="Upload">
+    </form>
+
+
+    <script>
+
+    var input = document.getElementById('file');
+    var label = input.nextElementSibling, labelVal = label.innerHTML;
+
+    input.addEventListener('change', function ( e )
+    {
+      var filename = '';
+      if( this.files && this.files.length > 1 )
+      {
+        filename = ( this.getAttribute( 'data-multiple-caption') || '').replace( '{count}', this.files.length );
+      }
+      else
+      {
+        filename = e.target.value.split( '\\' ).pop();
+      }
+
+      if( filename )
+      {
+        label.querySelector( 'span' ).innerHTML = filename;
+      }
+      else
+      {
+        label.querySelector( 'span' ).innerHTML = labelVal;
+      }
+    });
+
+
+    </script>
+{% endblock %}

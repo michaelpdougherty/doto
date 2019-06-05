@@ -1,0 +1,62 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    File
+{% endblock %}
+
+{% block main %}
+
+    <h4> filename here</h4>
+
+    <a href="/uploads/ LEFT FILENAME HERE ">
+        <img class="arrow" src="/static/chevron-left.png">
+    </a>
+
+    <img id="main" class="main" src="">
+
+    <a href="/uploads/ RIGHT FILENAME HERE ">
+        <img class="arrow" src="/static/chevron-right.png">
+    </a>
+
+    <br>
+
+    <div class="btn-group" role="group">
+        <a href="">
+            <button type="button" class="btn btn-success">Favorite</button>
+        </a>
+    </div>
+
+    <div class="btn-group" role="group">
+        <a href="">
+            <button type="button" class="btn btn-warning">Rename</button>
+        </a>
+    </div>
+
+    <div class="btn-group" role="group">
+        <a href="">
+            <button type="button" class="btn btn-primary">Download</button>
+        </a>
+    </div>
+
+    <div class="btn-group" role="group">
+        <a href="">
+            <button type="button" class="btn btn-danger">Delete</button>
+        </a>
+    </div>
+
+    <script>
+        (function() {
+
+            // Get request as json
+            fetch("/get/{{ filename }}")
+                .then((resp) => resp.json())
+                .then(function (data) {
+
+                    var id = data['id']
+                    var
+
+                })
+        })()
+    </script>
+
+{% endblock %}
