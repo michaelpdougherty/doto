@@ -6,20 +6,32 @@
 
 {% block main %}
 
-    <h4> filename here</h4>
+    <!-- Carousel block -->
+    <div id="carouselControls" class="center w-50 carousel slide" data-ride="carousel" data-interval="false">
+        <div class="carousel-inner">
+            {% for i in range(0, length) %}
+                <div class="carousel-item {% if i == index %} active{% endif %}">
+                    <img class="d-block w-100" src="{{ files[i]['path'] }}">
+                    <div class="carousel-caption d-none d-md-block">
+                        <h5>{{ files[i]['name'] }}</h5>
+                    </div>
+                </div>
+            {% endfor %}
 
-    <a href="/uploads/ LEFT FILENAME HERE ">
-        <img class="arrow" src="/static/chevron-left.png">
-    </a>
+            <a class="carousel-control-prev" href="#carouselControls" role="button" data-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="sr-only">Previous</span>
+            </a>
 
-    <img id="main" class="main" src="">
+            <a class="carousel-control-next" href="#carouselControls" role="button" data-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="sr-only">Next</span>
+            </a>
+        </div>
+    </div>
 
-    <a href="/uploads/ RIGHT FILENAME HERE ">
-        <img class="arrow" src="/static/chevron-right.png">
-    </a>
 
-    <br>
-
+    <!-- Buttons -->
     <div class="btn-group" role="group">
         <a href="">
             <button type="button" class="btn btn-success">Favorite</button>
@@ -44,19 +56,73 @@
         </a>
     </div>
 
+
+
     <script>
-        (function() {
 
-            // Get request as json
-            fetch("/get/{{ filename }}")
-                .then((resp) => resp.json())
-                .then(function (data) {
+        document.getElementsByClassName("carousel-control-prev")[0].addEventListener("click", rename());
 
-                    var id = data['id']
-                    var
+    /*
+        // Execute GET request
+        $.get("/get/", function (data) {
+            // Declare JSON vars
+            var index = data['index'];
+            var lastIndex = data['lastIndex'];
+            var files = data['files'];
 
-                })
-        })()
+            var leftIndex, rightIndex;
+
+            for (var i = 0; i <= lastIndex; i++) {
+
+            }
+
+            function getInfo (index) {
+
+                if (!index) {
+                    index = 0;
+                }
+
+                // Get current file info
+                var file = files[index];
+                var filename = file['name'];
+                var path = file['path'];
+
+                // Get left index
+                if (index == 0) {
+                    leftIndex = lastIndex;
+                } else {
+                    leftIndex = index - 1;
+                }
+
+                // Get right index
+                if (index == lastIndex) {
+                    rightIndex = 0;
+                } else {
+                    rightIndex = index + 1;
+                }
+
+                // Set title and image path
+                document.getElementById("title").innerHTML = filename;
+                document.getElementsByClassName("active")[0].firstChild.setAttribute("src", path);
+
+
+            }
+
+            getInfo(index);
+
+
+
+             Do this on button clicks
+            document.getElementById("left").addEventListener("click", async function () {
+                await getInfo(leftIndex);
+            });
+
+            document.getElementById("right").addEventListener("click", async function () {
+                await getInfo(rightIndex);
+            });
+
+        });
+        */
     </script>
 
 {% endblock %}

@@ -14,7 +14,7 @@ from werkzeug.utils import secure_filename
 from helpers import apology, login_required, lookup
 
 # Set files
-UPLOAD_FOLDER = "/home/ubuntu/workspace/final_project/static/files/"
+UPLOAD_FOLDER = "/home/ubuntu/workspace/github/doto/static/files/"
 ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
 
 # Configure application
@@ -260,6 +260,7 @@ def upload():
 
 
 @app.route("/get/<filename>", methods=["GET"])
+@login_required
 def get(filename):
 
     # Get user ID
@@ -279,7 +280,6 @@ def get(filename):
         index = files.index(file)
 
     data = {
-        'id': id,
         'index': index,
         'lastIndex': lastIndex,
         'files': files
@@ -288,28 +288,43 @@ def get(filename):
     return jsonify(data)
 
 @app.route("/uploads/<filename>")
+@login_required
 def uploaded_file(filename):
 
-    return render_template("file.html", filename=filename)
+    # Get user ID
+    id = session.get("user_id")
 
-    # Check if FILE first in FILES. Get left index
-    if index == 0:
-        leftIndex = lastIndex
+    # Get ALL user files
+    files = db.execute("SELECT name, path FROM files WHERE id = :id", id=id)
+
+    # Determine number of files
+    length = len(files)
+
+    # Determine lastIndex of files
+    lastIndex = length - 1
+
+    # Define index function
+    def find(lst, key, value):
+        for i, dic in enumerate(lst):
+            if dic[key] == value:
+                return i
+        return -1
+
+    # Get file by filename
+    if filename == "browse":
+        file = files[0]
+        index = 0
     else:
-        leftIndex = index - 1
+        file = db.execute("SELECT * FROM files WHERE name = :name AND id = :id", name=filename, id=id)[0]
+        index = find(files, "name", filename)
 
-    # Check if FILE last in FILES. Get right index
-    if index == lastIndex:
-        rightIndex = 0
-    else:
-        rightIndex = index + 1
+    data = {
+        'index': index,
+        'lastIndex': lastIndex,
+        'files': files,
+    }
 
-    # Get left and right arrow filenames
-    leftPath = files[leftIndex]['name']
-    rightPath = files[rightIndex]['name']
-
-    # Render image in template
-    return render_template("file.html", file=file, leftPath=leftPath, rightPath=rightPath)
+    return render_template("file.html", index=index, length=length, lastIndex=lastIndex, files=files)
 
 
 @app.route("/sell", methods=["GET", "POST"])
@@ -337,8 +352,8 @@ def get_path(filename):
     list = path.split('/')
 
     # Create list of new path
-    nlist = [list[0]]
-    nlist.extend(list[5:])
+    nlist = ['']
+    nlist.extend(list[-4:])
 
     # Create new path
     npath = "/".join(nlist)
