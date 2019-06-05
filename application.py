@@ -13,6 +13,10 @@ from werkzeug.utils import secure_filename
 
 from helpers import apology, login_required, lookup
 
+# Creates UPLOAD_FOLDER if it does not exist
+if "files" not in "static":
+    os.mkdir("static/files")
+
 # Set files
 UPLOAD_FOLDER = os.path.join(os.getcwd(), "static/files/")
 ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
