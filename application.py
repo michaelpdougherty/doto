@@ -14,7 +14,7 @@ from werkzeug.utils import secure_filename
 from helpers import apology, login_required, lookup
 
 # Set files
-UPLOAD_FOLDER = "/home/ubuntu/workspace/github/doto/static/files/"
+UPLOAD_FOLDER = os.path.join(os.getcwd(), "static/files/")
 ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
 
 # Configure application
