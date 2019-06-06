@@ -50,15 +50,13 @@
             </div>
         </nav>
 
-        {% if get_flashed_messages() %}
-            <header>
-                <div class="alert alert-primary border text-center" role="alert">
-                    {{ get_flashed_messages() | join(" ") }}
-                </div>
-            </header>
-        {% endif %}
+        <main class="container p-5"> <!-- mx-auto-->
+            {% if get_flashed_messages() %}
+                    <div class="flash alert alert-info border text-center fade show" role="alert" data-dismiss="alert">
+                        {{ get_flashed_messages() | join(" ") }}
+                    </div>
+            {% endif %}
 
-        <main class="container p-5">
             {% block main %}{% endblock %}
         </main>
 

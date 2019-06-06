@@ -1,7 +1,6 @@
 import math
 import os
 
-
 from cs50 import SQL
 from flask import Flask, flash, jsonify, redirect, render_template, request, send_from_directory, session, url_for
 from flask_session import Session
@@ -13,7 +12,14 @@ from werkzeug.utils import secure_filename
 
 from helpers import apology, login_required, lookup
 
-# Set files
+# Set static folder
+static = os.path.join(os.getcwd(), "static")
+
+# Create file folder if doesn't exist
+if "files" not in os.listdir(static):
+    os.mkdir(os.path.join(static, "files"))
+
+# Declare file folder
 UPLOAD_FOLDER = os.path.join(os.getcwd(), "static/files/")
 ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
 
@@ -172,6 +178,7 @@ def login():
 
     # User reached route via GET (as by clicking a link or via redirect)
     else:
+        flash("Hello")
         return render_template("login.html")
 
 

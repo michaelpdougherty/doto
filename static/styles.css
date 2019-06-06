@@ -126,3 +126,7 @@ main img
     margin-left: 50%;
     margin-right: 50%;
 }
+
+main .alert:hover {
+    cursor: pointer;
+}
