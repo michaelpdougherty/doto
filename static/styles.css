@@ -126,3 +126,19 @@ main img
     margin-left: 50%;
     margin-right: 50%;
 }
+
+header {
+  cursor: pointer;
+}
+
+#star {
+  display: none;
+  height: 3vh;
+  width: 3vh;
+  margin-bottom: 10px;
+}
+
+#title {
+  font-family: Raleway;
+  display: inline-block;
+}
