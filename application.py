@@ -3,7 +3,7 @@ import os
 
 
 from cs50 import SQL
-from flask import Flask, flash, jsonify, redirect, render_template, request, send_from_directory, session, url_for
+from flask import Flask, flash, jsonify, redirect, render_template, request, send_file, send_from_directory, session, url_for
 from flask_session import Session
 import re
 from tempfile import mkdtemp
@@ -360,7 +360,7 @@ def rename(filename, newDisplayName):
     if not newDisplayName:
         flash("Please enter a filename")
         return redirect("/uploads/" + filename)
-        
+
     # Get user ID
     id = session.get("user_id")
 
@@ -379,10 +379,20 @@ def rename(filename, newDisplayName):
         flash(f"Filename {newDisplayName} already exists")
         return redirect("/uploads/" + filename)
     else:
-        db.execute("UPDATE files SET displayName = :newDisplayName, name = :newFilename WHERE id = :id AND name = :filename", newDisplayName=newDisplayName, newFilename=newFilename, id=id, filename=filename)
+        db.execute("UPDATE files SET displayName = :newDisplayName, name = :newFilename, path = :path WHERE id = :id AND name = :filename", newDisplayName=newDisplayName, newFilename=newFilename, id=id, filename=filename, path=os.path.join(app.config['REL_UPLOAD_FOLDER'], newFilename))
+        path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        target = os.path.join(app.config['UPLOAD_FOLDER'], newFilename)
+        os.rename(path, target)
+
         flash(f"File {displayName} renamed to {newDisplayName}")
         return redirect("/uploads/" + newFilename)
 
+
+@app.route('/download/<path:filename>')
+@login_required
+def download_file(filename):
+    directory = app.config['UPLOAD_FOLDER']
+    return send_from_directory(directory, filename, as_attachment=True)
 
 @app.route("/sell", methods=["GET", "POST"])
 @login_required
