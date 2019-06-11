@@ -322,6 +322,8 @@ def uploaded_file(filename):
 
     # Get file by filename
     if filename == "browse":
+        if len(files) == 0:
+            return redirect("/")
         file = files[0]
         index = 0
     else:
@@ -393,6 +395,17 @@ def rename(filename, newDisplayName):
 def download_file(filename):
     directory = app.config['UPLOAD_FOLDER']
     return send_from_directory(directory, filename, as_attachment=True)
+
+
+@app.route('/delete/<filename>')
+@login_required
+def delete(filename):
+    id = session.get("user_id")
+    db.execute("DELETE FROM files WHERE id=:id AND name=:filename", id=id, filename=filename)
+    target = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+    os.remove(target)
+    return redirect("/uploads/browse")
+
 
 @app.route("/sell", methods=["GET", "POST"])
 @login_required
