@@ -50,9 +50,7 @@
   </div>
 
   <div class="btn-group" role="group">
-      <a id="delete" href="">
-          <button type="button" class="btn btn-danger">Delete</button>
-      </a>
+      <button id="delete" type="button" class="btn btn-danger">Delete</button>
   </div>
 
   <script>
@@ -105,6 +103,19 @@
           if (newDisplayName) {
               window.location.href = "/rename/" + name + "/" + newDisplayName;
           }
+      });
+
+      // Update download button href
+      document.getElementById("download").setAttribute("href", "/download/" + name);
+
+      // Update delete prompt function
+      var deleteButton = document.getElementById("delete");
+      var deletePrompt;
+      deleteButton.addEventListener("click", function () {
+        deletePrompt = prompt("Delete " + displayName + "? (Y/n)");
+        if (deletePrompt == "y" || deletePrompt == "Y") {
+          window.location.href = "/delete/" + name;
+        }
       });
 
     }
