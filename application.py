@@ -14,12 +14,13 @@ from werkzeug.utils import secure_filename
 from helpers import apology, login_required, lookup
 
 # Creates UPLOAD_FOLDER if it does not exist
-if "files" not in "static":
+if "files" not in os.listdir(os.path.join(os.getcwd(), "static")):
     os.mkdir("static/files")
 
 # Set files
 UPLOAD_FOLDER = os.path.join(os.getcwd(), "static/files/")
-ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
+REL_UPLOAD_FOLDER = "/static/files/"
+ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
 
 # Configure application
 app = Flask(__name__)
@@ -43,6 +44,7 @@ app.config["SESSION_FILE_DIR"] = mkdtemp()
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+app.config["REL_UPLOAD_FOLDER"] = REL_UPLOAD_FOLDER
 Session(app)
 
 # Configure CS50 Library to use SQLite database
@@ -116,8 +118,9 @@ def register():
             os.chdir(UPLOAD_FOLDER)
             os.mkdir(id)
 
-        # Update upload folder
+        # Update upload folders
         app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER + id + "/"
+        app.config['REL_UPLOAD_FOLDER'] = REL_UPLOAD_FOLDER + id + "/"
 
         # Redirect user to home page
         return redirect("/")
@@ -168,10 +171,12 @@ def login():
             os.chdir(UPLOAD_FOLDER)
             os.mkdir(id)
 
-        # Update upload folder
+        # Update upload folders
         app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER + id + "/"
+        app.config["REL_UPLOAD_FOLDER"] = REL_UPLOAD_FOLDER + id + "/"
 
         # Redirect user to home page
+        flash("Welcome, " + request.form.get("username"))
         return redirect("/")
 
     # User reached route via GET (as by clicking a link or via redirect)
@@ -246,10 +251,16 @@ def upload():
             size = os.path.getsize(path)
 
             # Get img-able path
-            path = get_path(filename)
+            path = app.config["REL_UPLOAD_FOLDER"] + filename
+            #path = get_path(filename)
+
+            # Get filename without extension
+            extension = re.match(r"^(.*?)(\.[a-zA-Z0-9]*)$", filename)
+            extension = extension.groups()
+            displayName = extension[0]
 
             # Insert file into SQL database
-            db.execute("INSERT INTO files (id, name, size, path) VALUES (:id, :filename, :size, :path)", id=id, filename=filename, size=size, path=path)
+            db.execute("INSERT INTO files (id, name, size, path, displayName) VALUES (:id, :filename, :size, :path, :displayName)", id=id, filename=filename, size=size, path=path, displayName=displayName)
 
             flash(f"{filename} uploaded")
 
@@ -299,7 +310,7 @@ def uploaded_file(filename):
     id = session.get("user_id")
 
     # Get ALL user files
-    files = db.execute("SELECT name, path FROM files WHERE id = :id", id=id)
+    files = db.execute("SELECT name, favorited, path, displayName FROM files WHERE id = :id", id=id)
 
     # Determine number of files
     length = len(files)
@@ -307,12 +318,7 @@ def uploaded_file(filename):
     # Determine lastIndex of files
     lastIndex = length - 1
 
-    # Define index function
-    def find(lst, key, value):
-        for i, dic in enumerate(lst):
-            if dic[key] == value:
-                return i
-        return -1
+
 
     # Get file by filename
     if filename == "browse":
@@ -325,10 +331,57 @@ def uploaded_file(filename):
     data = {
         'index': index,
         'lastIndex': lastIndex,
-        'files': files,
+        'files': files
     }
 
     return render_template("file.html", index=index, length=length, lastIndex=lastIndex, files=files)
+
+@app.route("/favorite/<filename>/<boolean>")
+@login_required
+def favorite(filename, boolean):
+
+    # Get user ID
+    id = session.get("user_id")
+
+    # Update file
+    db.execute("UPDATE files SET favorited = :boolean WHERE id = :id AND name = :filename", boolean=boolean, id=id, filename=filename)
+
+    if boolean == 'true':
+        flash(filename + " favorited")
+    else:
+        flash(filename + " unfavorited")
+
+    return redirect("/uploads/" + filename)
+
+@app.route("/rename/<filename>/<newDisplayName>")
+@login_required
+def rename(filename, newDisplayName):
+    # Ensure NOT NULL
+    if not newDisplayName:
+        flash("Please enter a filename")
+        return redirect("/uploads/" + filename)
+        
+    # Get user ID
+    id = session.get("user_id")
+
+    # Break filename into displayName and extension
+    matchedFilename = re.match(r"^(.*?)(\.[a-zA-Z0-9]*)$", filename)
+    matchedFilename = matchedFilename.groups()
+
+    displayName = matchedFilename[0]
+    extension = matchedFilename[1]
+
+    newFilename = newDisplayName + extension
+
+
+    # Ensure new filename does not already exist
+    if len(db.execute("SELECT * FROM files WHERE id = :id AND displayName = :newDisplayName", id=id, newDisplayName=newDisplayName)) != 0:
+        flash(f"Filename {newDisplayName} already exists")
+        return redirect("/uploads/" + filename)
+    else:
+        db.execute("UPDATE files SET displayName = :newDisplayName, name = :newFilename WHERE id = :id AND name = :filename", newDisplayName=newDisplayName, newFilename=newFilename, id=id, filename=filename)
+        flash(f"File {displayName} renamed to {newDisplayName}")
+        return redirect("/uploads/" + newFilename)
 
 
 @app.route("/sell", methods=["GET", "POST"])
@@ -347,23 +400,32 @@ def errorhandler(e):
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+# Get relative path of a file by filename
 def get_path(filename):
+    return app.config['REL_UPLOAD_FOLDER'] + filename
 
     # Full path of image
-    path = app.config['UPLOAD_FOLDER'] + filename
+    #path = app.config['UPLOAD_FOLDER'] + filename
 
     # Split list by '/'
-    list = path.split('/')
+    #list = path.split('/')
 
     # Create list of new path
-    nlist = ['']
-    nlist.extend(list[-4:])
+    #nlist = ['']
+    #nlist.extend(list[-4:])
 
     # Create new path
-    npath = "/".join(nlist)
+    #npath = "/".join(nlist)
 
     # Return new path
-    return npath
+    #return npath
+
+# Define index function
+def find(lst, key, value):
+    for i, dic in enumerate(lst):
+        if dic[key] == value:
+            return i
+    return -1
 
 # Listen for errors
 for code in default_exceptions:
