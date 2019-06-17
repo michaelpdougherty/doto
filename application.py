@@ -273,6 +273,27 @@ def upload():
     else:
         return render_template("upload.html")
 
+@app.route("/upload2", methods=["GET", "POST"])
+@login_required
+def upload2():
+    """Upload files"""
+
+    id = session.get("user_id")
+
+    # User reached route via GET
+    if request.method == "GET":
+        return render_template("upload2.html")
+
+    # User reached route via POST
+    else:
+
+        # Get uploaded files
+        uploaded_files = request.files.getlist("file")
+        files = []
+        for file in uploaded_files:
+            files.append(file.filename)
+        return render_template("test.html", test=files)
+
 
 @app.route("/get/<filename>", methods=["GET"])
 @login_required
