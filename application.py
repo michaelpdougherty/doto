@@ -195,9 +195,9 @@ def logout():
     return redirect("/")
 
 
-@app.route("/upload", methods=["GET", "POST"])
+@app.route("/upload2", methods=["GET", "POST"])
 @login_required
-def upload():
+def upload2():
     """Upload files"""
 
     id = session.get("user_id")
@@ -273,9 +273,9 @@ def upload():
     else:
         return render_template("upload.html")
 
-@app.route("/upload2", methods=["GET", "POST"])
+@app.route("/upload", methods=["GET", "POST"])
 @login_required
-def upload2():
+def upload():
     """Upload files"""
 
     id = session.get("user_id")
@@ -287,13 +287,74 @@ def upload2():
     # User reached route via POST
     else:
 
+        # Ensure user submitted a file
+        if 'file' not in request.files:
+            flash("No file submitted")
+            return redirect(request.url)
+
         # Get uploaded files
         uploaded_files = request.files.getlist("file")
+        files_uploaded = 0
         files = []
-        for file in uploaded_files:
-            files.append(file.filename)
-        return render_template("test.html", test=files)
 
+        # Save files to directory
+        for file in uploaded_files:
+            if file.filename and allowed_file(file.filename):
+                # Secure filename
+                filename = secure_filename(file.filename)
+
+                # Create upload path
+                path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+
+                # Ensure no duplicate filenames regex: ^(.*?)\((\d+)\)\.([a-zA-Z0-9]*)$
+                uniq = 1
+                while os.path.exists(path):
+                    # Split filename into "x(y).z"
+                    parenth = re.match(r"^(.*?)\((\d+)\)\.([a-zA-Z0-9]*)$", filename)
+
+                    # Filename has "(y).z" pattern
+                    if parenth:
+                        parenth = parenth.groups()
+                        filename = parenth[0] + "(" + str(uniq) + ")." + parenth[2]
+
+                    # Filename does not have "(y).z" pattern
+                    else:
+                        noParenth = re.match(r"^(.*?)\.([a-zA-Z0-9]*)$", filename).groups()
+                        filename = noParenth[0] + "(" + str(uniq) + ")." + noParenth[1]
+
+                    path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                    uniq += 1
+
+                # Save file
+                file.save(path)
+
+                # Get file size
+                size = os.path.getsize(path)
+
+                # Get relative path
+                path = app.config["REL_UPLOAD_FOLDER"] + filename
+
+                # Get filename without extension
+                extension = re.match(r"^(.*?)(\.[a-zA-Z0-9]*)$", filename)
+                extension = extension.groups()
+                displayName = extension[0]
+
+                # Insert file into SQL database
+                db.execute("INSERT INTO files (id, name, size, path, displayName) VALUES (:id, :filename, :size, :path, :displayName)", id=id, filename=filename, size=size, path=path, displayName=displayName)
+
+                # Increment message
+                files_uploaded += 1
+
+        # Redirect to first uploaded file
+        first_filename = uploaded_files[0].filename
+        if files_uploaded == 0:
+            flash("Error: No files uploaded")
+            return redirect("/")
+        elif files_uploaded == 1:
+            flash(f"{first_filename} uploaded")
+        else:
+            flash(f"{files_uploaded} files uploaded")
+        return redirect(url_for('uploaded_file', filename=first_filename))
 
 @app.route("/get/<filename>", methods=["GET"])
 @login_required
