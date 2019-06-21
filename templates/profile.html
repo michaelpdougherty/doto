@@ -1,0 +1,168 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Profile
+{% endblock %}
+
+{% block main %}
+
+    <!-- Account info -->
+    <div class="jumbotron">
+        <h1>Account Information</h1>
+    </div>
+
+    <!-- Full Name -->
+    <div class="row">
+        <div class="col-lg">
+            <h3 class="item-title">Full Name:</h3>
+        </div>
+        <div class="col-lg">
+            <h2 class="item-value">{{ userdata['fullname'] }}</h2>
+        </div>
+    </div>
+
+    <!-- Username -->
+    <div class="row">
+        <div class="col-lg">
+            <h3 class="item-title">Username:</h3>
+        </div>
+        <div class="col-lg">
+            <h2 class="item-value">{{ userdata['username'] }}</h2>
+        </div>
+    </div>
+
+    <!-- Images uploaded -->
+    <div class="row">
+        <div class="col-lg">
+            <h3 class="item-title">Uploaded:</h3>
+        </div>
+        <div class="col-lg">
+            <h2 class="item-value">{{ userdata['uploadedImages'] }}</h2>
+        </div>
+    </div>
+
+    <!-- Images favorited -->
+    <div class="row">
+        <div class="col-lg">
+            <h3 class="item-title">Favorited:</h3>
+        </div>
+        <div class="col-lg">
+            <h2 class="item-value">{{ userdata['favoritedImages'] }}</h2>
+        </div>
+    </div>
+
+    <!-- Data used / available -->
+    <div class="row">
+        <div class="col-lg">
+            <h3 class="item-title">Storage:</h3>
+        </div>
+        <div class="col-lg">
+            <h2 class="item-value">{{ "{0:.2f}".format(userdata['storageUsedInGb']) }} / 100.00 GB</h2>
+        </div>
+    </div>
+
+    <!-- Give feedback -->
+    <div class="row">
+        <div class="col-lg">
+            <h3 class="item-title">Send Feedback:</h3>
+        </div>
+        <div class="col-lg">
+            <form action="/feedback" method="post">
+                <div class="form-group">
+                    <input class="form-control" placeholder="Feedback" type="text" name="feedback">
+                    <input class="btn btn-outline-secondary" type="submit" value="Submit">
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- Account settings -->
+    <div class="jumbotron">
+        <h2>Account Settings</h2>
+    </div>
+
+    <!-- Change full name -->
+    <div class="row">
+        <div class="col-lg">
+            <h3 class="item-title">Change Full Name:</h3>
+        </div>
+        <div class="col-lg">
+            <form action="/changeFullname" method="post">
+                <div class="form-control-group">
+                    <input class="form-control" placeholder="Change Full Name" type="text" name="newFullname">
+                    <input class="btn btn-outline-secondary" type="submit" value="Submit">
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Change username -->
+    <div class="row">
+        <div class="col-lg">
+            <h3 class="item-title">Change Username:</h3>
+        </div>
+        <div class="col-lg">
+            <form action="/changeUsername" method="post">
+                <div class="form-control-group">
+                    <input class="form-control" placeholder="Change Username" type="text" name="newUsername">
+                    <input class="btn btn-outline-secondary" type="submit" value="Submit">
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Change password -->
+    <div class="row">
+        <div class="col-lg">
+            <h3 class="item-title">Change Password:</h3>
+        </div>
+        <div class="col-lg">
+            <form action="/changePassword" method="post">
+                <div class="form-control-group">
+                    <input class="password-form-control form-control" placeholder="Old Password" type="password" name="oldPassword">
+                </div>
+                <div class="form-control-group">
+                    <input class="password-form-control form-control" placeholder="New Password" type="password" name="newPassword">
+                </div>
+                <div class="form-control-group">
+                    <input class="password-form-control form-control" placeholder="Confirm New Password" type="password" name="confirmNewPassword">
+                </div>
+                <div class="form-group">
+                    <input class="password-form-control btn btn-outline-secondary" type="submit" value="Submit">
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Account -->
+    <div class="jumbotron">
+        <h3>Delete Account</h3>
+    </div>
+
+    <!-- Delete account button -->
+        <form id="deleteAccountForm" action="/deleteAccount" method="post">
+            <div class="form-control-group">
+                <input class="btn btn-danger form-control" id="deleteAccount" type="button" value="Delete Account">
+            </div>
+        </form>
+
+
+    <script>
+
+        // Declare variables
+        var delAcc = document.getElementById("deleteAccount");
+        var delAccForm = document.getElementById("deleteAccountForm");
+
+        // On Delete Account button click
+        delAcc.addEventListener("click", function () {
+            // Ensure user wants to delete account
+            var delPrompt = prompt("Type: Yes, I'd like to delete my account.");
+            if (delPrompt == "Yes, I'd like to delete my account.") {
+                delAccForm.submit();
+            }
+        })
+
+    </script>
+
+{% endblock %}

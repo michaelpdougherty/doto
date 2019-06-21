@@ -1,48 +1,72 @@
 {% extends "layout.html" %}
 
 {% block title %}
-    Home
+    Favorites
 {% endblock %}
 
 {% block main %}
 
+    <form action="/buttons" method="post" id="form">
     <table class="table">
         <thead>
             <tr>
+                <th>
+
+                    <div class="dropdown show">
+                      <a class="btn btn-secondary dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Select
+                      </a>
+
+                      <div class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+                        <a class="dropdown-item" href="#" id="selectAll">Select All</a>
+                      </div>
+                    </div>
+
+                </th>
                 <th>Name</th>
                 <th>Size</th>
                 <th>Date Uploaded</th>
-                <th>Favorite</th>
+                <th>Favorited</th>
             </tr>
         </thead>
         <tbody>
 
-            {% for i in files %}
+            {% for i in range(length) %}
+
                 <tr>
 
                     <td>
-                        <a href="/uploads/{{ i['name'] }}">
-                            {{ i['displayName'] }}
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" name="checkbox" class="custom-control-input" id="customCheckbox{{i}}">
+                            <p style="display: none">{{ files[i]['name'] }}</p>
+                            <p style="display: none">{{ files[i]['displayName'] }}</p>
+                            <label class="custom-control-label" for="customCheckbox{{i}}">{{i + 1}}</label>
+                        </div>
+                    </td>
+
+                    <td>
+                        <a href="/uploads/{{ files[i]['name'] }}">
+                            {{ files[i]['displayName'] }}
                         </a>
                     </td>
 
-                    {% if ((i['size'] / 1024) / 1024) > 1 %}
+                    {% if ((files[i]['size'] / 1024) / 1024) > 1 %}
 
                         <td>
-                            {{ "{0:.2f}".format((i['size'] / 1024) / 1024) }} MB
+                            {{ "{0:.2f}".format((files[i]['size'] / 1024) / 1024) }} MB
                         </td>
 
                     {% else %}
 
                         <td>
-                            {{ "{0:.2f}".format(i['size'] / 1024) }} KB
+                            {{ "{0:.2f}".format(files[i]['size'] / 1024) }} KB
                         </td>
 
                     {% endif %}
 
-                    <td>{{ i['date'] }}</td>
+                    <td>{{ date_format(files[i]['date']) }}</td>
 
-                    {% if i['favorited'] == 'true' %}
+                    {% if files[i]['favorited'] == 'true' %}
                         <td>
                             <img src="https://img.icons8.com/office/16/000000/checkmark.png">
                         </td>
@@ -52,5 +76,148 @@
             {% endfor %}
         </tbody>
     </table>
+
+    <!-- Hidden form data -->
+    <input type="hidden" id="filenames" name="filenames" value="">
+    <input type="hidden" id="newFilenames" name="newFilenames" value="">
+
+    <!-- Buttons -->
+    <div class="btn-group" role="group">
+        <button id="favoriteButton" type="button" class="btn btn-success">Favorite</button>
+    </div>
+
+    <div class="btn-group" role="group">
+        <button id="renameButton" type="button" class="btn btn-warning">Rename</button>
+    </div>
+
+    <div class="btn-group" role="group">
+        <button id="downloadButton" type="button" class="btn btn-primary">Download</button>
+    </div>
+
+    <div class="btn-group" role="group">
+        <button id="deleteButton" type="button" class="btn btn-danger">Delete</button>
+    </div>
+
+    </form>
+
+    <script>
+
+        var form = document.getElementById("form");
+        var filenames = document.getElementById("filenames");
+        var newFilenames = document.getElementById("newFilenames");
+        var checkboxes = document.getElementsByName("checkbox");
+
+        function getCheckboxes () {
+            var checkboxesChecked = [];
+            // Loop over them all
+            for (var i=0; i<checkboxes.length; i++) {
+                if (checkboxes[i].checked) {
+                    checkboxesChecked.push(checkboxes[i]);
+                }
+            }
+            // Return the array if it is non-empty, or null
+            return checkboxesChecked.length > 0 ? checkboxesChecked : null;
+        }
+
+        function getCheckedFilenames (checkedBoxes, noExtension) {
+            if (checkedBoxes == null) {
+                return null;
+            }
+            var filenames = [];
+            for (var i=0; i<checkedBoxes.length; i++) {
+                if (noExtension) {
+                    var filename = checkedBoxes[i].nextElementSibling.nextElementSibling.innerHTML;
+                } else {
+                    var filename = checkedBoxes[i].nextElementSibling.innerHTML;
+                }
+                filenames.push(filename);
+            }
+            return filenames.length > 0 ? filenames : null;
+        }
+
+        // Assign buttons
+        var favoriteButton = document.getElementById("favoriteButton");
+        var renameButton = document.getElementById("renameButton");
+        var downloadButton = document.getElementById("downloadButton");
+        var deleteButton = document.getElementById("deleteButton");
+
+        // Listen for favoriteButton clicks
+        favoriteButton.addEventListener("click", function () {
+            var favoritedFiles = getCheckedFilenames(getCheckboxes());
+            if (favoritedFiles) {
+                filenames.setAttribute("value", favoritedFiles);
+                form.setAttribute("action", "/buttons/favorite");
+                form.submit();
+            }
+        });
+
+        // Listen for renameButton clicks
+        renameButton.addEventListener("click", function () {
+            var renamedFiles = getCheckedFilenames(getCheckboxes(), true);
+            var renamedFilesFull = getCheckedFilenames(getCheckboxes("checkbox"));
+            if (renamedFiles) {
+                var renamedFilesDict = [];
+                form.setAttribute("action", "/buttons/rename");
+                for (var i=0; i<renamedFiles.length; i++) {
+                    var newFilename = prompt("Rename " + renamedFiles[i] + ":");
+                    var currentFilename = renamedFilesFull[i];
+                    renamedFilesDict.push({
+                        key: currentFilename,
+                        value: newFilename
+                    });
+                }
+                newFilenames.setAttribute("value", JSON.stringify(renamedFilesDict));
+                form.submit();
+            }
+        });
+
+        // Listen for downloadButton clicks
+        downloadButton.addEventListener("click", function () {
+            var downloadedFiles = getCheckedFilenames(getCheckboxes());
+            if (downloadedFiles) {
+                filenames.setAttribute("value", downloadedFiles);
+                form.setAttribute("action", "/buttons/download");
+                form.submit();
+            }
+        });
+
+        // Listen for deleteButton clicks
+        deleteButton.addEventListener("click", function () {
+            var deletedFiles = getCheckedFilenames(getCheckboxes());
+            if (deletedFiles) {
+                if (deletedFiles.length == 1) {
+                    var reallyDelete = prompt("Really delete " + deletedFiles[0] + "? (Y/n)")
+                } else {
+                    var reallyDelete = prompt("Really delete " + deletedFiles.length + " files? (Y/n)")
+                }
+                if (reallyDelete == 'Y' || reallyDelete == 'y') {
+                    filenames.setAttribute("value", deletedFiles);
+                    form.setAttribute("action", "/buttons/delete");
+                    form.submit();
+                }
+            }
+        });
+
+        // Select all function
+        document.getElementById("selectAll").addEventListener("click", function () {
+            // If no boxes are checked, check all and write "Deselect All"
+            if (!getCheckboxes()) {
+                var bool = true;
+                this.innerHTML = "Deselect All";
+            // Else if some boxes are checked, uncheck all and write "Select All"
+            } else {
+                var bool = false;
+                this.innerHTML = "Select All";
+            }
+            // Check/uncheck all boxes
+            for (var i=0; i<checkboxes.length; i++) {
+                checkboxes[i].checked = bool;
+            }
+        });
+
+
+
+    </script>
+
 
 {% endblock %}
