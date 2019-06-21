@@ -10,7 +10,19 @@
     <table class="table">
         <thead>
             <tr>
-                <th>Select</th>
+                <th>
+
+                    <div class="dropdown show">
+                      <a class="btn btn-secondary dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Select
+                      </a>
+
+                      <div class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+                        <a class="dropdown-item" href="#" id="selectAll">Select All</a>
+                      </div>
+                    </div>
+
+                </th>
                 <th>Name</th>
                 <th>Size</th>
                 <th>Date Uploaded</th>
@@ -52,7 +64,7 @@
 
                     {% endif %}
 
-                    <td>{{ files[i]['date'] }}</td>
+                    <td>{{ date_format(files[i]['date']) }}</td>
 
                     {% if files[i]['favorited'] == 'true' %}
                         <td>
@@ -93,9 +105,9 @@
         var form = document.getElementById("form");
         var filenames = document.getElementById("filenames");
         var newFilenames = document.getElementById("newFilenames");
+        var checkboxes = document.getElementsByName("checkbox");
 
-        function getCheckboxes (name) {
-            var checkboxes = document.getElementsByName(name);
+        function getCheckboxes () {
             var checkboxesChecked = [];
             // Loop over them all
             for (var i=0; i<checkboxes.length; i++) {
@@ -131,7 +143,7 @@
 
         // Listen for favoriteButton clicks
         favoriteButton.addEventListener("click", function () {
-            var favoritedFiles = getCheckedFilenames(getCheckboxes("checkbox"));
+            var favoritedFiles = getCheckedFilenames(getCheckboxes());
             if (favoritedFiles) {
                 filenames.setAttribute("value", favoritedFiles);
                 form.setAttribute("action", "/buttons/favorite");
@@ -141,7 +153,7 @@
 
         // Listen for renameButton clicks
         renameButton.addEventListener("click", function () {
-            var renamedFiles = getCheckedFilenames(getCheckboxes("checkbox"), true);
+            var renamedFiles = getCheckedFilenames(getCheckboxes(), true);
             var renamedFilesFull = getCheckedFilenames(getCheckboxes("checkbox"));
             if (renamedFiles) {
                 var renamedFilesDict = [];
@@ -161,7 +173,7 @@
 
         // Listen for downloadButton clicks
         downloadButton.addEventListener("click", function () {
-            var downloadedFiles = getCheckedFilenames(getCheckboxes("checkbox"));
+            var downloadedFiles = getCheckedFilenames(getCheckboxes());
             if (downloadedFiles) {
                 filenames.setAttribute("value", downloadedFiles);
                 form.setAttribute("action", "/buttons/download");
@@ -171,7 +183,7 @@
 
         // Listen for deleteButton clicks
         deleteButton.addEventListener("click", function () {
-            var deletedFiles = getCheckedFilenames(getCheckboxes("checkbox"));
+            var deletedFiles = getCheckedFilenames(getCheckboxes());
             if (deletedFiles) {
                 if (deletedFiles.length == 1) {
                     var reallyDelete = prompt("Really delete " + deletedFiles[0] + "? (Y/n)")
@@ -186,6 +198,21 @@
             }
         });
 
+        // Select all function
+        document.getElementById("selectAll").addEventListener("click", function () {
+            if (this.innerHTML == "Select All") {
+                var bool = true;
+                this.innerHTML = "Deselect All";
+            } else {
+                var bool = false;
+                this.innerHTML = "Select All";
+            }
+
+            // Check/uncheck all boxes
+            for (var i=0; i<checkboxes.length; i++) {
+                checkboxes[i].checked = bool;
+            }
+        });
 
 
 
