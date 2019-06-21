@@ -1,7 +1,6 @@
 import math
 import os
 
-
 from cs50 import SQL
 from flask import Flask, flash, jsonify, redirect, render_template, request, send_file, send_from_directory, session, url_for
 from flask_session import Session
@@ -12,6 +11,9 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
 from helpers import apology, login_required, lookup
+
+
+'''APPLICATION SETUP'''
 
 # Creates UPLOAD_FOLDER if it does not exist
 if "files" not in os.listdir(os.path.join(os.getcwd(), "static")):
@@ -51,6 +53,8 @@ Session(app)
 db = SQL("sqlite:///doto.db")
 
 
+'''APP ROUTES'''
+
 @app.route("/")
 @login_required
 def index():
@@ -61,7 +65,9 @@ def index():
 
     files = db.execute("SELECT * FROM files WHERE id = :id", id=id)
 
-    return render_template("index.html", username=username, files=files)
+    length = len(files)
+
+    return render_template("index.html", username=username, files=files, length=length)
 
 
 @app.route("/register", methods=["GET", "POST"])
@@ -195,84 +201,6 @@ def logout():
     return redirect("/")
 
 
-@app.route("/upload2", methods=["GET", "POST"])
-@login_required
-def upload2():
-    """Upload files"""
-
-    id = session.get("user_id")
-
-    # User reached route via POST
-    if request.method == 'POST':
-
-        # Ensure user submitted a file
-        if 'file' not in request.files:
-            flash("No file submitted")
-            return redirect(request.url)
-
-        file = request.files['file']
-
-        # Ensure file has a name
-        if file.filename == '':
-            flash("No file submitted")
-            return redirect(request.url)
-
-        # Save file to directory
-        if file and allowed_file(file.filename):
-            # Secure filename
-            filename = secure_filename(file.filename)
-
-            # Create upload path
-            path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-
-            # Ensure no duplicate filenames regex: ^(.*?)\((\d+)\)\.([a-zA-Z0-9]*)$
-            uniq = 1
-            while os.path.exists(path):
-                # Split filename into "x(y).z"
-                parenth = re.match(r"^(.*?)\((\d+)\)\.([a-zA-Z0-9]*)$", filename)
-
-                # Filename has "(y).z" pattern
-                if parenth:
-                    parenth = parenth.groups()
-                    filename = parenth[0] + "(" + str(uniq) + ")." + parenth[2]
-
-                # Filename does not have "(y).z" pattern
-                else:
-                    noParenth = re.match(r"^(.*?)\.([a-zA-Z0-9]*)$", filename).groups()
-                    filename = noParenth[0] + "(" + str(uniq) + ")." + noParenth[1]
-
-                path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                uniq += 1
-
-            # Save file
-            file.save(path)
-
-            # Get file size
-            size = os.path.getsize(path)
-
-            # Get img-able path
-            path = app.config["REL_UPLOAD_FOLDER"] + filename
-            #path = get_path(filename)
-
-            # Get filename without extension
-            extension = re.match(r"^(.*?)(\.[a-zA-Z0-9]*)$", filename)
-            extension = extension.groups()
-            displayName = extension[0]
-
-            # Insert file into SQL database
-            db.execute("INSERT INTO files (id, name, size, path, displayName) VALUES (:id, :filename, :size, :path, :displayName)", id=id, filename=filename, size=size, path=path, displayName=displayName)
-
-            flash(f"{filename} uploaded")
-
-            return redirect(url_for('uploaded_file', filename=filename))
-
-        # Else, try again
-        return redirect(request.url)
-
-    # User reached route via GET
-    else:
-        return render_template("upload.html")
-
 @app.route("/upload", methods=["GET", "POST"])
 @login_required
 def upload():
@@ -282,7 +210,7 @@ def upload():
 
     # User reached route via GET
     if request.method == "GET":
-        return render_template("upload2.html")
+        return render_template("upload.html")
 
     # User reached route via POST
     else:
@@ -294,6 +222,7 @@ def upload():
 
         # Get uploaded files
         uploaded_files = request.files.getlist("file")
+        files_submitted = len(uploaded_files)
         files_uploaded = 0
         files = []
 
@@ -343,22 +272,28 @@ def upload():
                 db.execute("INSERT INTO files (id, name, size, path, displayName) VALUES (:id, :filename, :size, :path, :displayName)", id=id, filename=filename, size=size, path=path, displayName=displayName)
 
                 # Increment message
+                files.append(filename)
                 files_uploaded += 1
 
-        # Redirect to first uploaded file
-        first_filename = uploaded_files[0].filename
-        if files_uploaded == 0:
-            flash("Error: No files uploaded")
+        if files_uploaded > 0:
+            first_filename = files[0]
+        else:
+            flash("Error: No files uploaded - Doto only accepts images less than 16MB")
             return redirect("/")
+
+        if files_uploaded < files_submitted:
+            flash(f"Error: {files_uploaded} / {files_submitted} files uploaded - Doto only accepts images less than 16MB")
         elif files_uploaded == 1:
             flash(f"{first_filename} uploaded")
         else:
             flash(f"{files_uploaded} files uploaded")
-        return redirect(url_for('uploaded_file', filename=first_filename))
+        return redirect(url_for('uploaded_file', filename=files[0]))
+
 
 @app.route("/get/<filename>", methods=["GET"])
 @login_required
 def get(filename):
+    '''Get files'''
 
     # Get user ID
     id = session.get("user_id")
@@ -384,9 +319,11 @@ def get(filename):
 
     return jsonify(data)
 
+
 @app.route("/uploads/<filename>")
 @login_required
 def uploaded_file(filename):
+    '''File browser'''
 
     # Get user ID
     id = session.get("user_id")
@@ -399,8 +336,6 @@ def uploaded_file(filename):
 
     # Determine lastIndex of files
     lastIndex = length - 1
-
-
 
     # Get file by filename
     if filename == "browse":
@@ -420,26 +355,104 @@ def uploaded_file(filename):
 
     return render_template("file.html", index=index, length=length, lastIndex=lastIndex, files=files)
 
-@app.route("/favorite/<filename>/<boolean>")
+
+@app.route("/buttons/<action>", methods=["POST"])
+def buttons(action):
+    id = session.get("user_id")
+
+    filenames = request.form.get("filenames").split(",")
+
+    if action == "favorite":
+        for name in filenames:
+            currentVal = db.execute("SELECT favorited FROM files WHERE id=:id and name=:name", id=id, name=name)[0]['favorited']
+            if currentVal == 'true':
+                boolean = 'false'
+            else:
+                boolean = 'true'
+            db.execute("UPDATE files SET favorited = :boolean WHERE id = :id AND name = :name", boolean=boolean, id=id, name=name)
+        if len(filenames) == 0:
+            flash("Error: no filenames")
+        if len(filenames) == 1:
+            first_filename = filenames[0]
+            if boolean == 'true':
+                flash(f"{first_filename} favorited")
+            else:
+                flash(f"{first_filename} unfavorited")
+        else:
+            flash(f"{len(filenames)} files (un)favorited")
+
+    elif action == "rename":
+        newFilenames = eval(request.form.get("newFilenames"))
+        renamedFiles = 0
+        for i in newFilenames:
+            if i['value']:
+                filename = i['key']
+                newDisplayName = i['value']
+
+                # Break filename into displayName and extension
+                matchedFilename = re.match(r"^(.*?)(\.[a-zA-Z0-9]*)$", filename)
+                matchedFilename = matchedFilename.groups()
+
+                displayName = matchedFilename[0]
+                extension = matchedFilename[1]
+
+                newFilename = secure_filename(newDisplayName + extension)
+
+                # Ensure new filename does not already exist
+                if len(db.execute("SELECT * FROM files WHERE id = :id AND displayName = :newDisplayName", id=id, newDisplayName=newDisplayName)) != 0:
+                    flash(f"Filename {newDisplayName} already exists")
+                    return redirect("/uploads/" + filename)
+                else:
+                    db.execute("UPDATE files SET displayName = :newDisplayName, name = :newFilename, path = :path WHERE id = :id AND name = :filename", newDisplayName=newDisplayName, newFilename=newFilename, id=id, filename=filename, path=os.path.join(app.config['REL_UPLOAD_FOLDER'], newFilename))
+                    path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                    target = os.path.join(app.config['UPLOAD_FOLDER'], newFilename)
+                    os.rename(path, target)
+                    renamedFiles += 1
+        if renamedFiles == 0:
+            flash("Error: no files renamed")
+        elif renamedFiles == 1:
+            flash(f"Renamed {newFilenames[0]['key']} to {newFilenames[0]['value']}")
+        elif renamedFiles > 1:
+            flash(f"Renamed {renamedFiles} files")
+    elif action == "download":
+        flash("Downloaded")
+    elif action == "delete":
+        flash("Deleted")
+    else:
+        flash("Error: unknown request")
+
+    return redirect("/")
+
+
+@app.route("/favorite/<filename>/<boolean>", methods=["GET", "POST"])
 @login_required
 def favorite(filename, boolean):
+    '''Favorite file by filename and boolean'''
 
     # Get user ID
     id = session.get("user_id")
 
-    # Update file
-    db.execute("UPDATE files SET favorited = :boolean WHERE id = :id AND name = :filename", boolean=boolean, id=id, filename=filename)
+    # User sent data as GET request
+    if request.method == "GET":
 
-    if boolean == 'true':
-        flash(filename + " favorited")
+        # Update file
+        db.execute("UPDATE files SET favorited = :boolean WHERE id = :id AND name = :filename", boolean=boolean, id=id, filename=filename)
+
+        if boolean == 'true':
+            flash(filename + " favorited")
+        else:
+            flash(filename + " unfavorited")
+
+        return redirect("/uploads/" + filename)
+
     else:
-        flash(filename + " unfavorited")
+        return redirect("/uploads")
 
-    return redirect("/uploads/" + filename)
 
 @app.route("/rename/<filename>/<newDisplayName>")
 @login_required
 def rename(filename, newDisplayName):
+    '''Rename file by filename and new filename'''
     # Ensure NOT NULL
     if not newDisplayName:
         flash("Please enter a filename")
@@ -455,8 +468,7 @@ def rename(filename, newDisplayName):
     displayName = matchedFilename[0]
     extension = matchedFilename[1]
 
-    newFilename = newDisplayName + extension
-
+    newFilename = secure_filename(newDisplayName + extension)
 
     # Ensure new filename does not already exist
     if len(db.execute("SELECT * FROM files WHERE id = :id AND displayName = :newDisplayName", id=id, newDisplayName=newDisplayName)) != 0:
@@ -475,6 +487,7 @@ def rename(filename, newDisplayName):
 @app.route('/download/<path:filename>')
 @login_required
 def download_file(filename):
+    '''Download file by filename'''
     directory = app.config['UPLOAD_FOLDER']
     return send_from_directory(directory, filename, as_attachment=True)
 
@@ -482,18 +495,12 @@ def download_file(filename):
 @app.route('/delete/<filename>')
 @login_required
 def delete(filename):
+    '''Delete a file by filename'''
     id = session.get("user_id")
     db.execute("DELETE FROM files WHERE id=:id AND name=:filename", id=id, filename=filename)
     target = os.path.join(app.config["UPLOAD_FOLDER"], filename)
     os.remove(target)
     return redirect("/uploads/browse")
-
-
-@app.route("/sell", methods=["GET", "POST"])
-@login_required
-def sell():
-    """Sell shares of stock"""
-    return apology("TODO")
 
 
 def errorhandler(e):
@@ -502,35 +509,24 @@ def errorhandler(e):
         e = InternalServerError()
     return render_template("error.html", name=e.name, code=e.code)
 
+
 def allowed_file(filename):
+    '''Determine if filename has an allowed extension'''
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# Get relative path of a file by filename
+
 def get_path(filename):
+    '''Get relative path of a file by filename'''
     return app.config['REL_UPLOAD_FOLDER'] + filename
 
-    # Full path of image
-    #path = app.config['UPLOAD_FOLDER'] + filename
 
-    # Split list by '/'
-    #list = path.split('/')
-
-    # Create list of new path
-    #nlist = ['']
-    #nlist.extend(list[-4:])
-
-    # Create new path
-    #npath = "/".join(nlist)
-
-    # Return new path
-    #return npath
-
-# Define index function
 def find(lst, key, value):
+    '''Index file in files'''
     for i, dic in enumerate(lst):
         if dic[key] == value:
             return i
     return -1
+
 
 # Listen for errors
 for code in default_exceptions:

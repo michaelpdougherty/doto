@@ -1,0 +1,56 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Home
+{% endblock %}
+
+{% block main %}
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Size</th>
+                <th>Date Uploaded</th>
+                <th>Favorite</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            {% for i in files %}
+                <tr>
+
+                    <td>
+                        <a href="/uploads/{{ i['name'] }}">
+                            {{ i['displayName'] }}
+                        </a>
+                    </td>
+
+                    {% if ((i['size'] / 1024) / 1024) > 1 %}
+
+                        <td>
+                            {{ "{0:.2f}".format((i['size'] / 1024) / 1024) }} MB
+                        </td>
+
+                    {% else %}
+
+                        <td>
+                            {{ "{0:.2f}".format(i['size'] / 1024) }} KB
+                        </td>
+
+                    {% endif %}
+
+                    <td>{{ i['date'] }}</td>
+
+                    {% if i['favorited'] == 'true' %}
+                        <td>
+                            <img src="https://img.icons8.com/office/16/000000/checkmark.png">
+                        </td>
+                    {% endif %}
+
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+{% endblock %}

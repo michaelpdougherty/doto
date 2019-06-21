@@ -90,15 +90,18 @@
 
       // Get favorite URL
       var favoriteURL = "/favorite/" + name + "/" + bool;
-      console.log(favoriteURL);
 
       // Update favorite button href
       document.getElementById("favorite").setAttribute("href", favoriteURL);
 
-      // Update rename prompt function
-      var rename = document.getElementById("rename");
+      // Update rename prompt function and remove event listeners
+      var oldRename = document.getElementById("rename");
+      var rename = oldRename.cloneNode(true);
+      oldRename.parentNode.replaceChild(rename, oldRename);
+
+      // Prepare to rename
       var newDisplayName;
-      rename.addEventListener("click", function () {
+      rename.addEventListener("click", function rename () {
           newDisplayName = prompt("Rename " + displayName + ":");
           if (newDisplayName) {
               window.location.href = "/rename/" + name + "/" + newDisplayName;
@@ -108,8 +111,10 @@
       // Update download button href
       document.getElementById("download").setAttribute("href", "/download/" + name);
 
-      // Update delete prompt function
-      var deleteButton = document.getElementById("delete");
+      // Update delete prompt function and remove event listeners
+      var oldDelete = document.getElementById("delete");
+      var deleteButton = oldDelete.cloneNode(true);
+      oldDelete.parentNode.replaceChild(deleteButton, oldDelete)
       var deletePrompt;
       deleteButton.addEventListener("click", function () {
         deletePrompt = prompt("Delete " + displayName + "? (Y/n)");
