@@ -79,11 +79,11 @@
     </div>
 
     <div class="btn-group" role="group">
-        <button id="downloadButton" type="submit" class="btn btn-primary">Download</button>
+        <button id="downloadButton" type="button" class="btn btn-primary">Download</button>
     </div>
 
     <div class="btn-group" role="group">
-        <button id="deleteButton" type="submit" class="btn btn-danger">Delete</button>
+        <button id="deleteButton" type="button" class="btn btn-danger">Delete</button>
     </div>
 
     </form>
@@ -163,6 +163,7 @@
         downloadButton.addEventListener("click", function () {
             var downloadedFiles = getCheckedFilenames(getCheckboxes("checkbox"));
             if (downloadedFiles) {
+                filenames.setAttribute("value", downloadedFiles);
                 form.setAttribute("action", "/buttons/download");
                 form.submit();
             }

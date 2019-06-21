@@ -9,6 +9,7 @@ from tempfile import mkdtemp
 from werkzeug.exceptions import default_exceptions, HTTPException, InternalServerError
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
+from zipfile import ZipFile
 
 from helpers import apology, login_required, lookup
 
@@ -180,6 +181,9 @@ def login():
         # Update upload folders
         app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER + id + "/"
         app.config["REL_UPLOAD_FOLDER"] = REL_UPLOAD_FOLDER + id + "/"
+
+        # Remove zips
+        removeZips(app.config["UPLOAD_FOLDER"], f"{request.form.get('username')}.zip")
 
         # Redirect user to home page
         flash("Welcome, " + request.form.get("username"))
@@ -360,8 +364,10 @@ def uploaded_file(filename):
 def buttons(action):
     id = session.get("user_id")
 
+    # Get submitted files
     filenames = request.form.get("filenames").split(",")
 
+    # Favorite action
     if action == "favorite":
         for name in filenames:
             currentVal = db.execute("SELECT favorited FROM files WHERE id=:id and name=:name", id=id, name=name)[0]['favorited']
@@ -381,6 +387,7 @@ def buttons(action):
         else:
             flash(f"{len(filenames)} files (un)favorited")
 
+    # Rename action
     elif action == "rename":
         newFilenames = eval(request.form.get("newFilenames"))
         renamedFiles = 0
@@ -414,8 +421,28 @@ def buttons(action):
             flash(f"Renamed {newFilenames[0]['key']} to {newFilenames[0]['value']}")
         elif renamedFiles > 1:
             flash(f"Renamed {renamedFiles} files")
+
+    # Download action
     elif action == "download":
-        flash("Downloaded")
+        # Get upload folder
+        directory = app.config["UPLOAD_FOLDER"]
+        os.chdir(directory)
+        # Download one file
+        if len(filenames) == 1:
+            return send_from_directory(directory, filenames[0], as_attachment=True)
+        # Zip multiple files, deleting any existing zips
+        else:
+            username = db.execute("SELECT username FROM users WHERE id=:id", id=id)[0]['username']
+            zipName = f"{username}.zip"
+            if zipName in os.listdir(directory):
+                os.remove(zipName)
+            with ZipFile(zipName,'w') as zip:
+                for file in filenames:
+                    zip.write(file)
+                ZipFile.close(zip)
+            return send_from_directory(directory, zipName, as_attachment=True)
+
+    # Delete action
     elif action == "delete":
         flash("Deleted")
     else:
@@ -501,6 +528,11 @@ def delete(filename):
     target = os.path.join(app.config["UPLOAD_FOLDER"], filename)
     os.remove(target)
     return redirect("/uploads/browse")
+
+
+def removeZips(directory, zipName):
+    if zipName in os.listdir(directory):
+        os.remove(zipName)
 
 
 def errorhandler(e):
