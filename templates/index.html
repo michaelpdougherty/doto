@@ -173,8 +173,16 @@
         deleteButton.addEventListener("click", function () {
             var deletedFiles = getCheckedFilenames(getCheckboxes("checkbox"));
             if (deletedFiles) {
-                form.setAttribute("action", "/buttons/delete");
-                form.submit();
+                if (deletedFiles.length == 1) {
+                    var reallyDelete = prompt("Really delete " + deletedFiles[0] + "? (Y/n)")
+                } else {
+                    var reallyDelete = prompt("Really delete " + deletedFiles.length + " files? (Y/n)")
+                }
+                if (reallyDelete == 'Y' || reallyDelete == 'y') {
+                    filenames.setAttribute("value", deletedFiles);
+                    form.setAttribute("action", "/buttons/delete");
+                    form.submit();
+                }
             }
         });
 

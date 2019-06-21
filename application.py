@@ -444,7 +444,17 @@ def buttons(action):
 
     # Delete action
     elif action == "delete":
-        flash("Deleted")
+        for name in filenames:
+            db.execute("DELETE FROM files WHERE name = :name AND id = :id", name=name, id=id)
+            os.remove(os.path.join(app.config["UPLOAD_FOLDER"], name))
+        if len(filenames) == 0:
+            flash("Error: no files deleted")
+        elif len(filenames) == 1:
+            flash(f"Deleted {filenames[0]}")
+        elif len(filenames) > 1:
+            flash(f"Deleted {len(filenames)} files")
+
+    # Unknown action
     else:
         flash("Error: unknown request")
 
