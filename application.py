@@ -2,6 +2,7 @@ import math
 import os
 
 from cs50 import SQL
+from datetime import datetime
 from flask import Flask, flash, jsonify, redirect, render_template, request, send_file, send_from_directory, session, url_for
 from flask_session import Session
 import re
@@ -100,6 +101,9 @@ def register():
             flash("Passwords do not match")
             return redirect(request.url)
 
+        # Maybe full name was submitted
+        fullname = request.form.get("fullname")
+
         # Query database for username
         rows = db.execute("SELECT * FROM users WHERE username = :username", username=username)
 
@@ -112,7 +116,7 @@ def register():
         hash = generate_password_hash(password, method='pbkdf2:sha256', salt_length=8)
 
         # Create new user
-        db.execute("INSERT INTO users (username, hash) VALUES (:username, :hash)", username=username, hash=hash)
+        db.execute("INSERT INTO users (username, hash, fullname) VALUES (:username, :hash, :fullname)", username=username, hash=hash, fullname=fullname)
 
         # Query database again
         rows = db.execute("SELECT * FROM users WHERE username = :username", username=username)
@@ -207,6 +211,171 @@ def logout():
 
     # Redirect user to login form
     return redirect("/")
+
+
+@app.route("/profile")
+@login_required
+def profile ():
+    '''User profile'''
+
+    # Get user ID
+    id = session.get("user_id")
+
+    # Get user_info
+    user_info = db.execute("SELECT * FROM users WHERE id = :id", id=id)[0]
+    username = user_info['username']
+    hashed_password = user_info['hash']
+    fullname = user_info['fullname']
+
+    # Get user files info
+    user_files = db.execute("SELECT * FROM files WHERE id = :id", id=id)
+    uploadedImages = len(user_files)
+    favoritedImages = len(db.execute("SELECT * FROM files WHERE id = :id AND favorited = 'true'", id=id))
+    storageUsedInBytes = 0
+    for i in user_files:
+        storageUsedInBytes += i['size']
+    storageUsedInGb = storageUsedInBytes / (1024**3)
+
+    userdata = {
+        'username': username,
+        'fullname': fullname,
+        'uploadedImages': uploadedImages,
+        'favoritedImages': favoritedImages,
+        'storageUsedInGb': storageUsedInGb
+
+    }
+
+
+    # Get hashed password
+
+    return render_template("profile.html", userdata=userdata)
+
+
+@app.route("/changeFullname", methods=["POST"])
+@login_required
+def changeFullname():
+    '''Change full name'''
+    id = session.get("user_id")
+    newFullname = request.form.get("newFullname")
+    if not newFullname:
+        flash("Error: no full name submitted")
+        return redirect("/profile")
+    db.execute("UPDATE users SET fullname = :newFullname WHERE id = :id", newFullname=newFullname, id=id)
+    flash(f"Success! Changed full name to {newFullname}")
+    return redirect("/profile")
+
+
+@app.route("/changePassword", methods=["POST"])
+@login_required
+def changePassword():
+    '''Change current user password'''
+    # Get vars and ensure all parts of form were submitted
+    id = session.get("user_id")
+    oldPassword = request.form.get("oldPassword")
+    if not oldPassword:
+        flash("Error: please enter old password")
+        return redirect("/profile")
+    newPassword = request.form.get("newPassword")
+    if not newPassword:
+        flash("Error: please enter new password")
+        return redirect("/profile")
+    confirmNewPassword = request.form.get("confirmNewPassword")
+    if not confirmNewPassword:
+        flash("Error: please confirm new password")
+        return redirect("/profile")
+
+    # Ensure old password is correct
+    rows = db.execute("SELECT * FROM users WHERE id = :id", id=id)
+    if not check_password_hash(rows[0]["hash"], oldPassword):
+        flash("Error: incorrect old password")
+        return redirect("/profile")
+
+    # Ensure passwords match
+    if newPassword != confirmNewPassword:
+        flash("Error: passwords do not match")
+        return redirect("/profile")
+
+    # All good, hash and update password
+    hash = generate_password_hash(newPassword, method='pbkdf2:sha256', salt_length=8)
+    db.execute("UPDATE users SET hash = :hash WHERE id = :id", hash=hash, id=id)
+    flash("Success! Password changed")
+    return redirect("/profile")
+
+
+@app.route("/deleteAccount", methods=["POST"])
+@login_required
+def deleteAccount():
+    '''Delete user account'''
+    id = session.get("user_id")
+
+    # Delete user files from directory
+    directory = app.config["UPLOAD_FOLDER"]
+    for file in os.listdir(directory):
+        os.remove(os.path.join(directory, file))
+    os.rmdir(directory)
+
+    # Delete user files from database
+    db.execute("DELETE FROM files WHERE id=:id", id=id)
+
+    # Delete user account
+    db.execute("DELETE FROM users WHERE id=:id", id=id)
+
+    flash("Congratulations, you've deleted your account")
+    return redirect("/login")
+
+
+
+@app.route("/changeUsername", methods=["POST"])
+@login_required
+def changeUsername():
+    '''Change current username'''
+    id = session.get("user_id")
+
+    # Get form data
+    newUsername = request.form.get("newUsername")
+
+    # Ensure username does not exist
+    usernameQuery = db.execute("SELECT * FROM users WHERE username = :username", username=newUsername)
+    # Username is taken
+    if len(usernameQuery) == 1:
+        flash("Sorry, that username is taken")
+    # Username is available
+    else:
+        db.execute("UPDATE users SET username = :username WHERE id = :id", username=newUsername, id=id)
+        flash(f"Success! Username changed to {newUsername}")
+    return redirect("/profile")
+
+@app.route("/feedback", methods=["POST"])
+@login_required
+def feedback():
+    '''Append to feedback txt file'''
+    # Get user data
+    id = session.get("user_id")
+    user_info = db.execute("SELECT * FROM users WHERE id = :id", id=id)[0]
+    username = user_info['username']
+    fullname = user_info['fullname']
+    timeSubmitted = datetime.now().strftime("%c")
+    feedback = request.form.get("feedback")
+    if not feedback:
+        flash("Error: no feedback submitted")
+        return redirect("/profile")
+
+    # Open feedback file
+    feedbackPath = os.path.join(app.config["UPLOAD_FOLDER"], "../../feedback.txt")
+    f = open(feedbackPath, 'a')
+    f.write("Feedback\n")
+    f.write("==========\n")
+    f.write(f"User ID: {id}\n")
+    f.write(f"Username: {username}\n")
+    f.write(f"Full Name: {fullname}\n")
+    f.write(f"Time Submitted: {timeSubmitted}\n")
+    f.write("Feedback Content:\n")
+    f.write(f"\"{feedback}\"\n\n\n")
+    f.close()
+
+    flash("Thanks! Your feedback is greatly appreciated")
+    return redirect("/profile")
+
 
 
 @app.route("/favorites")

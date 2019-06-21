@@ -50,10 +50,10 @@
                         </a>
                     </td>
 
-                    {% if ((files[i]['size'] / 1024) / 1024) > 1 %}
+                    {% if files[i]['size'] / (1024**2) > 1 %}
 
                         <td>
-                            {{ "{0:.2f}".format((files[i]['size'] / 1024) / 1024) }} MB
+                            {{ "{0:.2f}".format(files[i]['size'] / (1024**2)) }} MB
                         </td>
 
                     {% else %}
